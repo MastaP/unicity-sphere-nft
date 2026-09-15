@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+import { nftContentFromWire } from '@unicitylabs/sphere-sdk/connect';
 import { describe, expect, it } from 'vitest';
 import { base64ToBytes, bytesToBase64 } from './base64';
 import {
@@ -57,9 +58,20 @@ describe('buildMemeNftContent', () => {
         { trait_type: 'Bottom text', value: 'mint a meme' },
       ],
       collection: MEME_COLLECTION,
+      collection_id: null,
     });
     expect(MEME_EXTERNAL_URL).toBe('https://mastap.github.io/unicity-sphere-nft/');
     expect(MEME_COLLECTION).toBe('Sphere Memes');
+  });
+
+  it("passes the wallet's own mint_nft decoder, so a wallet on the same SDK accepts it", () => {
+    // The wallet validates the intent with nftContentFromWire before any dialog opens; a
+    // missing or extra field is refused there with INVALID_PARAMS.
+    const decoded = nftContentFromWire(buildMemeNftContent(input));
+    if (decoded.kind !== 'metadata') throw new Error('expected metadata');
+    expect(decoded.name).toBe('One does not simply');
+    expect(decoded.collection_id).toBeNull();
+    expect(decoded.image).toMatchObject({ kind: 'media', media_type: 'image/webp' });
   });
 
   it('carries image bytes that decode back to the exported file', () => {

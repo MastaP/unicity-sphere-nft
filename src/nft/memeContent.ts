@@ -48,5 +48,7 @@ export function buildMemeNftContent(input: MemeNftInput): WireNftMetadata {
     external_url: MEME_EXTERNAL_URL,
     attributes,
     collection: MEME_COLLECTION,
+    // No stable collection identifier: "Sphere Memes" is an open collection, so claiming one would mean nothing.
+    collection_id: null,
   };
 }

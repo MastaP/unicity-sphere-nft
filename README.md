@@ -58,11 +58,12 @@ npm run dev        # http://localhost:5173/unicity-sphere-nft/
 ```
 
 `VITE_WALLET_URL` selects the wallet opened in popup mode. It defaults to production Sphere,
-`https://sphere.unicity.network`. To test against a staging wallet build (GitHub Pages previews), put it in
-`.env.local`:
+`https://sphere.unicity.network`. To test against another wallet build, put it in `.env.local`: staging, or a
+GitHub Pages preview of a Sphere branch.
 
 ```bash
-VITE_WALLET_URL=https://unicity-sphere.github.io/sphere/<branch>
+VITE_WALLET_URL=https://sphere.staging.unicity.network
+# or: VITE_WALLET_URL=https://unicity-sphere.github.io/sphere/<branch>
 ```
 
 The wallet must be on testnet.
@@ -85,7 +86,8 @@ build, then publishes `dist/` with `actions/deploy-pages`. The Vite `base` is `/
 Pages project URL.
 
 One-time repository setup: **Settings → Pages → Source: GitHub Actions**. Optionally set a repository variable
-`VITE_WALLET_URL` to build against a different popup wallet.
+`VITE_WALLET_URL` to build against a different popup wallet. The deployed site sets it to staging,
+`https://sphere.staging.unicity.network`.
 
 ## Project layout
 

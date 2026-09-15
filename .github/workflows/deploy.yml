@@ -30,7 +30,8 @@ jobs:
       - run: npm run build
         env:
           # Optional repository variable selecting the popup-mode wallet
-          # (e.g. a staging preview). Unset falls back to production Sphere.
+          # (e.g. staging, https://sphere.staging.unicity.network). Unset
+          # falls back to production Sphere.
           VITE_WALLET_URL: ${{ vars.VITE_WALLET_URL }}
 
       - uses: actions/upload-pages-artifact@v5

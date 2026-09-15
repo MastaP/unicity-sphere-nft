@@ -4,11 +4,13 @@ import { Header } from './components/Header';
 import { MemeEditor } from './components/MemeEditor';
 import { MintPanel } from './components/MintPanel';
 import { useSphereConnect } from './connect/useSphereConnect';
+import { DEFAULT_WALLET, useWalletChoice, walletById } from './connect/walletChoice';
 import { DEFAULT_SETTINGS, type MemeSettings } from './meme/render';
 import { useOwnedImage } from './meme/useOwnedImage';
 
 export function App() {
-  const wallet = useSphereConnect();
+  const [walletChoice, chooseWallet] = useWalletChoice();
+  const wallet = useSphereConnect(walletById(walletChoice).url);
   const { image, setImage, clearImage } = useOwnedImage();
   const [settings, setSettings] = useState<MemeSettings>(DEFAULT_SETTINGS);
   const [mintBusy, setMintBusy] = useState(false);
@@ -25,6 +27,7 @@ export function App() {
         status={wallet.status}
         identity={wallet.identity}
         locked={wallet.locked}
+        walletBadge={wallet.opensPopup && walletChoice !== DEFAULT_WALLET ? walletById(walletChoice).label : null}
         onDisconnect={() => void wallet.disconnect()}
       />
       <main className="space-y-4">
@@ -32,6 +35,8 @@ export function App() {
           <ConnectCard
             status={wallet.status}
             notice={wallet.notice}
+            walletChoice={wallet.opensPopup ? walletChoice : null}
+            onWalletChoice={chooseWallet}
             onConnect={wallet.connect}
             onDismissNotice={wallet.dismissNotice}
           />

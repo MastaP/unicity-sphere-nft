@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_WALLET_URL,
-  dappMetadata,
-  NETWORK,
-  requestedScopes,
-  resolveWalletUrl,
-  SPHERE_PERMISSIONS,
-} from './config';
+import { dappMetadata, NETWORK, requestedScopes, SPHERE_PERMISSIONS } from './config';
 
 describe('Connect permissions', () => {
   it('are exactly identity:read and nft:mint', () => {
@@ -18,20 +11,6 @@ describe('Connect permissions', () => {
     const first = requestedScopes();
     first.push('balance:read');
     expect(requestedScopes()).toEqual(['identity:read', 'nft:mint']);
-  });
-});
-
-describe('resolveWalletUrl', () => {
-  it('defaults to production Sphere', () => {
-    expect(resolveWalletUrl(undefined)).toBe(DEFAULT_WALLET_URL);
-    expect(resolveWalletUrl('')).toBe('https://sphere.unicity.network');
-    expect(resolveWalletUrl('   ')).toBe(DEFAULT_WALLET_URL);
-  });
-
-  it('accepts a staging preview URL and drops trailing slashes', () => {
-    expect(resolveWalletUrl('https://unicity-sphere.github.io/sphere/feat-x/')).toBe(
-      'https://unicity-sphere.github.io/sphere/feat-x',
-    );
   });
 });
 

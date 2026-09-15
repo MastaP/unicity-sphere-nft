@@ -45,8 +45,13 @@ How the app finds the wallet (handled by `autoConnect` from the SDK):
 
 - **Inside Sphere** (iframe): connects to the parent wallet, silently if this app was approved before.
 - **Standalone with the Sphere extension**: connects through the extension, silently if approved before.
-- **Standalone without the extension**: the Connect button opens the wallet in a popup (`VITE_WALLET_URL`).
-  There is no silent check on page load here, because it would have to open a window.
+- **Standalone without the extension**: the Connect button opens the wallet in a popup. There is no silent
+  check on page load here, because it would have to open a window.
+
+Only in that last case does the connect card offer a choice of wallet: **Production**
+(`https://sphere.unicity.network`, the default) or **Staging** (`https://sphere.staging.unicity.network`). The
+choice is remembered in this browser, and a staging connection is marked in the header. Inside Sphere, or
+through the extension, the wallet is already given, so the choice is hidden.
 
 ## Running locally
 
@@ -57,16 +62,8 @@ npm ci
 npm run dev        # http://localhost:5173/unicity-sphere-nft/
 ```
 
-`VITE_WALLET_URL` selects the wallet opened in popup mode. It defaults to production Sphere,
-`https://sphere.unicity.network`. To test against another wallet build, put it in `.env.local`: staging, or a
-GitHub Pages preview of a Sphere branch.
-
-```bash
-VITE_WALLET_URL=https://sphere.staging.unicity.network
-# or: VITE_WALLET_URL=https://unicity-sphere.github.io/sphere/<branch>
-```
-
-The wallet must be on testnet.
+The popup wallets are listed in `src/connect/walletChoice.ts`; add an entry there to try another wallet build, such
+as a GitHub Pages preview of a Sphere branch. The wallet must be on testnet.
 
 ## Scripts
 
@@ -85,16 +82,14 @@ The wallet must be on testnet.
 build, then publishes `dist/` with `actions/deploy-pages`. The Vite `base` is `/unicity-sphere-nft/`, matching the
 Pages project URL.
 
-One-time repository setup: **Settings → Pages → Source: GitHub Actions**. Optionally set a repository variable
-`VITE_WALLET_URL` to build against a different popup wallet. The deployed site sets it to staging,
-`https://sphere.staging.unicity.network`.
+One-time repository setup: **Settings → Pages → Source: GitHub Actions**.
 
 ## Project layout
 
 ```
 src/
-  connect/      Connect config (permissions, dApp metadata), useSphereConnect hook,
-                mint_nft wire types, error mapping
+  connect/      Connect config (permissions, dApp metadata), popup wallet choice,
+                useSphereConnect hook, mint_nft wire types, error mapping
   meme/         caption fit/wrap and placement, canvas rendering, image loading,
                 export-size search
   nft/          base64 and the meme NFT content builder

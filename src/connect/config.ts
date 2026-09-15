@@ -19,15 +19,6 @@ export function requestedScopes(): PermissionScope[] {
   return [...SPHERE_PERMISSIONS];
 }
 
-export const DEFAULT_WALLET_URL = 'https://sphere.unicity.network';
-
-/** The wallet opened in popup mode. Trailing slashes are dropped: autoConnect appends `/connect`. */
-export function resolveWalletUrl(configured: string | undefined): string {
-  return (configured ?? '').trim().replace(/\/+$/, '') || DEFAULT_WALLET_URL;
-}
-
-export const WALLET_URL = resolveWalletUrl(import.meta.env.VITE_WALLET_URL);
-
 export const NETWORK = SPHERE_NETWORKS.testnet2;
 
 export function dappMetadata(): DAppMetadata {

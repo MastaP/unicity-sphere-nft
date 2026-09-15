@@ -9,10 +9,12 @@ interface HeaderProps {
   status: ConnectionStatus;
   identity: PublicIdentity | null;
   locked: boolean;
+  /** Names a popup wallet other than production, so the user sees where mints go; null otherwise. */
+  walletBadge: string | null;
   onDisconnect: () => void;
 }
 
-export function Header({ status, identity, locked, onDisconnect }: HeaderProps) {
+export function Header({ status, identity, locked, walletBadge, onDisconnect }: HeaderProps) {
   return (
     <header className="flex items-center justify-between gap-3 py-4">
       <div className="flex min-w-0 items-center gap-2.5">
@@ -22,6 +24,11 @@ export function Header({ status, identity, locked, onDisconnect }: HeaderProps) 
 
       {status === 'connected' && (
         <div className="flex min-w-0 items-center gap-1.5">
+          {walletBadge && (
+            <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
+              {walletBadge}
+            </span>
+          )}
           <p
             className="flex min-w-0 items-center gap-1.5 rounded-full border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200"
             title={identity?.directAddress ?? identity?.chainPubkey}

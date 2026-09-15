@@ -10,7 +10,6 @@ import {
   NETWORK,
   requestedScopes,
   SILENT_CONNECT_TIMEOUT_MS,
-  WALLET_URL,
 } from './config';
 import {
   classifyMintFailure,
@@ -39,6 +38,11 @@ export interface SphereConnectState {
 }
 
 export interface SphereConnect extends SphereConnectState {
+  /**
+   * Connect opens the wallet in a popup: standalone, without the Sphere extension. Only
+   * then is the wallet URL used — inside Sphere, or through the extension, the wallet is given.
+   */
+  opensPopup: boolean;
   /** Whether minting can work on this connection; null while not connected. */
   mintSupport: MintSupport | null;
   connect: () => void;
@@ -83,13 +87,20 @@ function isIdentity(value: unknown): value is PublicIdentity {
   return typeof value === 'object' && value !== null && typeof (value as PublicIdentity).chainPubkey === 'string';
 }
 
-export function useSphereConnect(): SphereConnect {
+/** `walletUrl` is the wallet a popup opens; the attempt reads it when it starts. */
+export function useSphereConnect(walletUrl: string): SphereConnect {
+  const [opensPopup] = useState(() => detectTransport() === 'popup');
   // In a popup-only environment a silent check would have to open a window on
   // page load, so there is nothing to check: go straight to the Connect button.
   const [state, setState] = useState<SphereConnectState>(() => ({
     ...DISCONNECTED,
-    status: detectTransport() === 'popup' ? 'disconnected' : 'checking',
+    status: opensPopup ? 'disconnected' : 'checking',
   }));
+
+  const walletUrlRef = useRef(walletUrl);
+  useEffect(() => {
+    walletUrlRef.current = walletUrl;
+  }, [walletUrl]);
 
   const connectionRef = useRef<AutoConnectResult | null>(null);
   /** Bumped whenever a pending attempt's result must be thrown away. */
@@ -169,7 +180,7 @@ export function useSphereConnect(): SphereConnect {
         // No await before this call: a popup must open inside the click's user activation.
         const result = await autoConnect({
           dapp: dappMetadata(),
-          walletUrl: WALLET_URL,
+          walletUrl: walletUrlRef.current,
           network: NETWORK,
           permissions: requestedScopes(),
           silent,
@@ -205,8 +216,8 @@ export function useSphereConnect(): SphereConnect {
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-    if (detectTransport() !== 'popup') void attempt(true);
-  }, [attempt]);
+    if (!opensPopup) void attempt(true);
+  }, [attempt, opensPopup]);
 
   // Inside Sphere, the wallet announces HOST_READY when it can serve a handshake:
   // after it finishes loading, and after an unlock that left it without a session.
@@ -281,6 +292,7 @@ export function useSphereConnect(): SphereConnect {
 
   return {
     ...state,
+    opensPopup,
     mintSupport: state.status === 'connected' ? mintSupport(state.walletProtocol, state.permissions) : null,
     connect,
     disconnect,

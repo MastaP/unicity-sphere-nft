@@ -1,6 +1,6 @@
 import { ERROR_CODES, HOST_READY_TYPE } from '@unicitylabs/sphere-sdk/connect';
 import type { AutoConnectConfig } from '@unicitylabs/sphere-sdk/connect/browser';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
@@ -56,6 +56,8 @@ beforeEach(() => {
   sdk.autoConnect.mockReset();
   sdk.detectTransport.mockReturnValue('popup');
   sdk.isInIframe.mockReturnValue(false);
+  // The popup wallet choice is remembered in this browser; every test starts without one.
+  localStorage.clear();
 
   // jsdom has no canvas: a context that measures 10 px per character and draws nothing.
   const context = new Proxy({} as Record<string | symbol, unknown>, {
@@ -275,5 +277,55 @@ describe('Sphere Memes', () => {
       expect(await screen.findByRole('button', { name: /^connect wallet$/i })).toBeEnabled();
       expect(screen.getAllByText('Lost the connection to your wallet').length).toBeGreaterThan(0);
     });
+  });
+});
+
+describe('Sphere Memes — which wallet a popup opens', () => {
+  it('opens production Sphere by default, and staging once Staging is picked — remembered on the next visit', async () => {
+    const user = userEvent.setup();
+    sdk.autoConnect.mockRejectedValue(new Error('Connection rejected by wallet'));
+
+    const first = render(<App />);
+    const choice = screen.getByRole('radiogroup', { name: 'Wallet' });
+    expect(within(choice).getByRole('radio', { name: 'Production' })).toHaveAttribute('aria-checked', 'true');
+    expect(within(choice).getByRole('radio', { name: 'Staging' })).toHaveAttribute('aria-checked', 'false');
+
+    await user.click(within(choice).getByRole('radio', { name: 'Staging' }));
+    await user.click(screen.getByRole('button', { name: /^connect wallet$/i }));
+    expect(sdk.autoConnect).toHaveBeenCalledTimes(1);
+    expect(sdk.autoConnect.mock.calls[0][0]).toMatchObject({ walletUrl: 'https://sphere.staging.unicity.network' });
+
+    first.unmount();
+    render(<App />);
+    expect(screen.getByRole('radio', { name: 'Staging' })).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('marks a staging connection in the header, and a production one not at all', async () => {
+    const user = userEvent.setup();
+    const { result } = fakeWallet();
+    sdk.autoConnect.mockResolvedValue(result);
+
+    const production = render(<App />);
+    await user.click(screen.getByRole('button', { name: /^connect wallet$/i }));
+    await screen.findByText('@alice');
+    expect(screen.queryByText('Staging')).not.toBeInTheDocument();
+    production.unmount();
+
+    render(<App />);
+    await user.click(screen.getByRole('radio', { name: 'Staging' }));
+    await user.click(screen.getByRole('button', { name: /^connect wallet$/i }));
+    await screen.findByText('@alice');
+    expect(screen.getByText('Staging')).toBeInTheDocument();
+  });
+
+  it.each(['iframe', 'extension'] as const)('offers no wallet choice when the connection goes through the %s', async (transport) => {
+    sdk.detectTransport.mockReturnValue(transport);
+    sdk.isInIframe.mockReturnValue(transport === 'iframe');
+    sdk.autoConnect.mockRejectedValue(new Error('Connection rejected by wallet'));
+
+    render(<App />);
+
+    expect(await screen.findByRole('button', { name: /^connect wallet$/i })).toBeEnabled();
+    expect(screen.queryByRole('radiogroup', { name: 'Wallet' })).not.toBeInTheDocument();
   });
 });

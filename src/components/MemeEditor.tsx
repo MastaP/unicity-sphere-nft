@@ -7,12 +7,16 @@ import {
   firstImageFile,
   ImageInputError,
   loadImage,
+  MAX_INPUT_BYTES,
   outputSize,
   type LoadedImage,
 } from '../meme/image';
 import { captionFont, drawMeme, layoutMeme, type MemeSettings } from '../meme/render';
 import { CaptionControls } from './CaptionControls';
 import { focusRing, panel, secondaryButton } from './ui';
+
+/** The largest file `loadImage` accepts, for the dropzone hint. */
+const MAX_INPUT_MB = Math.round(MAX_INPUT_BYTES / (1024 * 1024));
 
 interface MemeEditorProps {
   image: LoadedImage | null;
@@ -258,7 +262,10 @@ export function MemeEditor({ image, onImage, settings, onSettingsChange, disable
             <li>or drag and drop it here</li>
             <li>or paste it with Ctrl+V / ⌘V</li>
           </ul>
-          <p className="text-xs text-neutral-500">PNG, JPEG, WebP or GIF (first frame)</p>
+          <div className="text-xs text-neutral-500">
+            <p>PNG, JPEG, WebP or GIF (first frame) · up to {MAX_INPUT_MB} MB</p>
+            <p className="mt-0.5">Large images are resized and compressed to fit inside the NFT.</p>
+          </div>
         </div>
       )}
 

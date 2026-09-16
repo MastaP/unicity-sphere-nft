@@ -70,6 +70,7 @@ export function layoutMeme(
     if (!text) continue;
     const layout = fitCaption(text, {
       maxWidth: width * 0.92,
+      maxHeight: height * 0.92,
       fontSize: (shortEdge * settings.sizePercent) / 100,
       minFontSize: Math.max(8, shortEdge * 0.025),
       autoFit: settings.autoFit,

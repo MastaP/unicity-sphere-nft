@@ -22,8 +22,16 @@ const fitsAt = (text: string, size: number, maxWidth: number) => {
 };
 
 describe('normalizeCaption', () => {
-  it('collapses whitespace and trims', () => {
-    expect(normalizeCaption('  one   does\tnot \n simply ', false)).toBe('one does not simply');
+  it('collapses the spaces within a line and trims', () => {
+    expect(normalizeCaption('  one   does\tnot  simply ', false)).toBe('one does not simply');
+  });
+
+  it('keeps the line breaks the user typed and drops the blank ones', () => {
+    expect(normalizeCaption(' one does not \n\n  simply mint \n', false)).toBe('one does not\nsimply mint');
+  });
+
+  it('treats a CRLF or a lone CR as one break', () => {
+    expect(normalizeCaption('one\r\ndoes\rnot', false)).toBe('one\ndoes\nnot');
   });
 
   it('uppercases only when the toggle is on', () => {
@@ -56,10 +64,19 @@ describe('wrapWords', () => {
   it('returns no lines for empty text', () => {
     expect(wrapWords('', 100, 20, measure)).toEqual([]);
   });
+
+  it('breaks where the text already breaks, wrapping each line on its own', () => {
+    expect(wrapWords('aaa\nbbb ccc', 70, 20, measure)).toEqual(['aaa', 'bbb ccc']);
+  });
+
+  it('keeps a typed break even where both lines would have fitted on one', () => {
+    expect(wrapWords('aa\nbb', 400, 20, measure)).toEqual(['aa', 'bb']);
+  });
 });
 
 describe('fitCaption', () => {
-  const base = { maxWidth: 400, fontSize: 80, minFontSize: 10, autoFit: true, measure };
+  // maxHeight is deliberately out of reach here, so these cases exercise the width rules alone.
+  const base = { maxWidth: 400, maxHeight: 10_000, fontSize: 80, minFontSize: 10, autoFit: true, measure };
 
   it('keeps short text at the chosen size on one line', () => {
     expect(fitCaption('HELLO', base)).toEqual({ lines: ['HELLO'], fontSize: 80, overflow: false });
@@ -120,6 +137,37 @@ describe('fitCaption', () => {
     expect(layout.fontSize).toBe(20);
     expect(layout.lines).toHaveLength(MAX_CAPTION_LINES);
     expect(layout.lines.join(' ')).toBe(text);
+  });
+
+  it('honours more typed lines than the auto-wrap cap, shrinking instead of joining them', () => {
+    const text = 'ONE\nDOES NOT\nSIMPLY\nMINT A MEME';
+    const layout = fitCaption(text, base);
+
+    expect(layout.lines).toEqual(['ONE', 'DOES NOT', 'SIMPLY', 'MINT A MEME']);
+    expect(layout.lines.length).toBeGreaterThan(MAX_CAPTION_LINES);
+    expect(layout.overflow).toBe(false);
+    // 'MINT A MEME' is 11 characters, so 72 is the largest size fitting 400 px.
+    expect(layout.fontSize).toBe(72);
+  });
+
+  it('shrinks typed lines that would otherwise run past the available height', () => {
+    // 50 single-character lines: within the 100-character field limit, and every line
+    // fits the width, so only a height check can stop them rendering off the image.
+    const text = Array.from({ length: 50 }, () => 'A').join('\n');
+    const layout = fitCaption(text, { ...base, maxHeight: 600 });
+
+    expect(layout.overflow).toBe(false);
+    expect(layout.lines).toHaveLength(50);
+    expect(layout.fontSize).toBeLessThan(80);
+    expect(layout.lines.length * layout.fontSize * LINE_HEIGHT).toBeLessThanOrEqual(600);
+  });
+
+  it('flags overflow when typed lines cannot fit the height even at the floor size', () => {
+    const text = Array.from({ length: 50 }, () => 'A').join('\n');
+    const layout = fitCaption(text, { ...base, maxHeight: 100 });
+
+    expect(layout.overflow).toBe(true);
+    expect(layout.fontSize).toBe(10);
   });
 
   it('with auto-fit off, wraps at the chosen size without shrinking or capping lines', () => {

@@ -25,10 +25,12 @@ export function CaptionControls({ settings, onChange, overflow }: CaptionControl
           <label htmlFor={`${slot}-text`} className={fieldLabel}>
             {LABELS[slot]}
           </label>
-          <input
+          {/* A textarea, not an input: Enter has to insert a line break, and nothing
+              here sits in a <form>, so there is no submit to suppress. */}
+          <textarea
             id={`${slot}-text`}
-            type="text"
-            className={textInput}
+            rows={2}
+            className={`${textInput} resize-y`}
             value={settings[slot].text}
             maxLength={CAPTION_MAX_LENGTH}
             placeholder={slot === 'top' ? 'One does not simply' : 'mint a meme'}

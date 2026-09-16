@@ -35,9 +35,8 @@ export interface FitOptions {
   fontSize: number;
   /** Auto-fit never shrinks below this, in px. */
   minFontSize: number;
-  /** Shrink to fit the width, the height and at most `maxLines`; otherwise wrap at `fontSize` as-is. */
+  /** Shrink to fit the width, the height and at most `MAX_CAPTION_LINES`; otherwise wrap at `fontSize` as-is. */
   autoFit: boolean;
-  maxLines?: number;
   measure: MeasureText;
 }
 
@@ -130,20 +129,26 @@ function blockHeight(lineCount: number, fontSize: number): number {
  *
  * With auto-fit on, the result uses the largest whole-pixel size between
  * `minFontSize` and `fontSize` at which the text wraps into at most `maxLines`
- * lines that each fit `maxWidth`. When even the floor does not fit, the floor
- * is used, the lines past the cap are joined into the last one, and `overflow`
- * is set so the UI can ask for shorter text.
+ * lines that each fit `maxWidth` and a block no taller than `maxHeight`.
  *
  * `maxLines` never falls below the number of lines `text` already has: the cap
  * exists to stop auto-wrapping from building a wall of text, and a break the
  * user typed is intent, not something to join away.
+ *
+ * When even the floor does not fit, the floor is used and `overflow` is set so
+ * the UI can ask for shorter text. That fallback still keeps every word and
+ * stays inside `maxHeight`, giving way in a fixed order: a typed segment is
+ * collapsed onto one over-wide line first, and only if one line per segment is
+ * STILL too tall does the tail merge across breaks. Height is the sole hard
+ * limit there — `maxLines` may be exceeded by a line or two rather than join
+ * two typed lines that had room to stay apart.
  *
  * The search only ever returns a size it has measured to fit, so it stays
  * correct even if a real font's widths are not perfectly monotonic in size.
  */
 export function fitCaption(text: string, options: FitOptions): CaptionLayout {
   const { maxWidth, maxHeight, measure, autoFit } = options;
-  const maxLines = Math.max(options.maxLines ?? MAX_CAPTION_LINES, text.split('\n').length);
+  const maxLines = Math.max(MAX_CAPTION_LINES, text.split('\n').length);
   const preferred = Math.max(1, Math.floor(options.fontSize));
 
   if (!text) return { lines: [], fontSize: preferred, overflow: false };
@@ -180,11 +185,22 @@ export function fitCaption(text: string, options: FitOptions): CaptionLayout {
   }
   if (best) return { ...best, overflow: false };
 
-  const wrapped = wrapWords(text, maxWidth, floor, measure);
-  const lines =
-    wrapped.length > maxLines
-      ? [...wrapped.slice(0, maxLines - 1), wrapped.slice(maxLines - 1).join(' ')]
+  // Collapse inside a typed segment first: that costs an over-wide line, never a break.
+  const segments = text.split('\n');
+  const allowance = Math.max(1, maxLines - segments.length + 1);
+  let lines = segments.flatMap((segment) => {
+    const wrapped = wrapWords(segment, maxWidth, floor, measure);
+    return wrapped.length > allowance
+      ? [...wrapped.slice(0, allowance - 1), wrapped.slice(allowance - 1).join(' ')]
       : wrapped;
+  });
+
+  // Last resort: one line per typed segment is still taller than the canvas allows,
+  // so the tail has to merge across breaks to keep the block on the image.
+  const heightCap = Math.max(1, Math.floor(maxHeight / (floor * LINE_HEIGHT)));
+  if (lines.length > heightCap) {
+    lines = [...lines.slice(0, heightCap - 1), lines.slice(heightCap - 1).join(' ')];
+  }
   return { lines, fontSize: floor, overflow: true };
 }
 

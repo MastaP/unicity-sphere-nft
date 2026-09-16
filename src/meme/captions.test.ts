@@ -170,6 +170,33 @@ describe('fitCaption', () => {
     expect(layout.fontSize).toBe(10);
   });
 
+  it('collapses a typed segment onto one line rather than merging two of them', () => {
+    // The first segment needs two lines at the floor size, which pushes the block past
+    // the cap. The break between DDD and EEE has room to survive, so it must.
+    const text = 'ONE DOES NOT SIMPLY MINT A MEME WITHOUT A WALLET AND A LOT OF PATIENCE OK\nDDD\nEEE';
+    const layout = fitCaption(text, { ...base, maxWidth: 120, minFontSize: 20 });
+
+    expect(layout.overflow).toBe(true);
+    expect(layout.lines.at(-2)).toBe('DDD');
+    expect(layout.lines.at(-1)).toBe('EEE');
+    expect(layout.lines.join(' ')).toBe(text.replace(/\n/g, ' '));
+  });
+
+  it('keeps the unfittable fallback inside the height, merging across breaks only then', () => {
+    const text = Array.from({ length: 50 }, () => 'A').join('\n');
+    const layout = fitCaption(text, { ...base, maxHeight: 100 });
+
+    expect(layout.overflow).toBe(true);
+    expect(layout.lines.length * layout.fontSize * LINE_HEIGHT).toBeLessThanOrEqual(100);
+    expect(layout.lines.join(' ')).toBe(text.replace(/\n/g, ' '));
+  });
+
+  it('with auto-fit off, flags a block taller than the height', () => {
+    const text = Array.from({ length: 20 }, () => 'A').join('\n');
+    expect(fitCaption(text, { ...base, autoFit: false, maxHeight: 200 }).overflow).toBe(true);
+    expect(fitCaption(text, { ...base, autoFit: false, maxHeight: 10_000 }).overflow).toBe(false);
+  });
+
   it('with auto-fit off, wraps at the chosen size without shrinking or capping lines', () => {
     const text = 'A LONG CAPTION THAT NEEDS MANY LINES AT THIS SIZE';
     // 40 px per character: the longest word (CAPTION, 280 px) fits, whole phrases do not.

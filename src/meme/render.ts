@@ -3,6 +3,7 @@
  * the preview and every export resolution produce the same composition.
  */
 import {
+  captionMargin,
   fitCaption,
   LINE_HEIGHT,
   normalizeCaption,
@@ -64,13 +65,25 @@ export function layoutMeme(
 ): PlacedCaption[] {
   const measure = measurer(ctx);
   const shortEdge = Math.min(width, height);
+  const drawn = CAPTION_SLOTS.map((slot) => ({
+    slot,
+    text: normalizeCaption(settings[slot].text, settings.uppercase),
+  })).filter((entry) => entry.text !== '');
+
+  // Two AUTO-placed captions hang from opposite margins, so each may claim only half
+  // the band between them; budgeting them independently lets the pair cover more than
+  // the canvas and silently overlap. A dragged caption hangs from no margin, so it
+  // neither takes a share nor forces the other to halve — any overlap there is the
+  // user's own doing, and `placeCaption` honours the position they chose.
+  const band = height - 2 * captionMargin(width, height);
+  const autoPlaced = drawn.filter(({ slot }) => settings[slot].position === null).length;
+  const maxHeight = band / (autoPlaced > 1 ? 2 : 1);
+
   const placed: PlacedCaption[] = [];
-  for (const slot of CAPTION_SLOTS) {
-    const text = normalizeCaption(settings[slot].text, settings.uppercase);
-    if (!text) continue;
+  for (const { slot, text } of drawn) {
     const layout = fitCaption(text, {
       maxWidth: width * 0.92,
-      maxHeight: height * 0.92,
+      maxHeight,
       fontSize: (shortEdge * settings.sizePercent) / 100,
       minFontSize: Math.max(8, shortEdge * 0.025),
       autoFit: settings.autoFit,

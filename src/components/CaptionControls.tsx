@@ -43,7 +43,9 @@ export function CaptionControls({ settings, onChange, overflow }: CaptionControl
           />
           {overflow[slot] && (
             <p id={`${slot}-overflow`} className="mt-1 text-xs text-amber-400">
-              Too long to fit. Shorten it or turn off auto-fit.
+              {settings.autoFit
+                ? 'Too long to fit. Shorten it or turn off auto-fit.'
+                : 'Too long to fit. Shorten it, use fewer lines, or turn auto-fit back on.'}
             </p>
           )}
         </div>
